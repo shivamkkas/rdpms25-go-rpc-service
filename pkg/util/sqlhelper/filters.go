@@ -9,7 +9,7 @@ import (
 
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/lib/pq"
-	"github.com/ponder2000/rdpms25-cloud-api/pkg/util/parser"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/util/parser"
 )
 
 type Filter struct {

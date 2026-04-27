@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/ponder2000/rdpms25-cloud-api/pkg/util/generic"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/util/generic"
 )
 
 func ComplexFilterAppend(filters []qm.QueryMod, newFilter string, val any) []qm.QueryMod {

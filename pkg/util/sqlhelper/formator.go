@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ponder2000/rdpms25-cloud-api/pkg/util/generic"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/util/generic"
 )
 
 func IntArrayToPostgresArray(intSlice []int) string {

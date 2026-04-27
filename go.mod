@@ -1,4 +1,4 @@
-module rdpms25-go-rpc-service
+module github.com/shivamkkas/rdpms25-go-rpc-service
 
 go 1.25.0
 
