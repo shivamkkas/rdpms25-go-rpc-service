@@ -1,0 +1,514 @@
+syntax = "proto3";
+
+package forecasting;
+option go_package = "pb/proto;proto";
+import "google/protobuf/struct.proto";
+
+// Common status and error handling
+enum ServiceStatus {
+    SUCCESS = 0;
+    FAILED = 1;
+    PARTIAL_SUCCESS = 2;
+    VALIDATION_ERROR = 3;
+    NOT_FOUND = 4;
+    UNAUTHORIZED = 5;
+    RATE_LIMITED = 6;
+}
+
+// Base error message structure for consistent error reporting
+message ErrorDetails {
+    string code = 1;           // Error code for programmatic handling
+    string message = 2;        // Human-readable error message
+    string field = 3;          // Field that caused the error (for validation errors)
+    repeated string stack_trace = 4;  // Stack trace for debugging
+}
+
+// Forecasting Models
+enum ForecastingModel {
+    FORECASTING_UNKNOWN = 0;
+    N_BEATS = 1;
+    DEEP_TCN = 2;
+    DEEP_AR = 3;
+    BAYESIAN_LSTM = 4;
+}
+// Classification Models
+enum ClassifierModel {
+    CLASSIFIER_UNKNOWN = 0;
+    SUPPORT_VECTOR_MACHINE = 1;
+    MULTI_LAYER_PERCEPTRON = 2;
+    GRADIENT_BOOST = 3;
+    RANDOM_FOREST = 4;
+    XG_BOOST = 5;
+    LIGHT_GBM = 6;
+}
+enum AnomalyModel {
+    ANOMALY_UNKNOWN = 0;
+    ISOLATION_FOREST = 1;
+    ONE_CLASS_SVM = 2;
+    LOCAL_OUTLIER_FACTOR = 3;
+    ELLIPTIC_ENVELOPE = 4;
+    AUTOENCODER = 5;
+}
+enum ModelType {
+    ModelTypeUknown = 0;
+    F = 1;
+    C = 2;
+    A = 3;
+}
+enum FillMethods {
+    FF = 0;
+    BF = 1;
+    I = 2;
+}
+enum AggregationMethods {
+    min = 0;
+    max = 1;
+    mean = 2;
+    sum = 3;
+}
+message Int32List {
+  repeated int32 values = 1;
+}
+// Enhanced metrics with confidence intervals
+message ForecastMetrics {
+    double mae = 1;
+    double mse = 2;
+    double rmse = 3;
+    double mape = 4;
+}
+
+// Enhanced classification metrics
+message ClassificationMetrics {
+    int32 class_label = 1;
+    string class_name = 2;
+    double precision = 3;
+    double recall = 4;
+    double f1_score = 5;
+    int32 support = 6;
+}
+
+message AggregateClassificationMetrics {
+    double precision = 1;
+    double recall = 2;
+    double f1_score = 3;
+    int32 total_support = 4;
+}
+message ForecastCommonConfig {
+    int32 lookback_window = 1;
+    int32 forecast_horizon = 2;
+    int32 epochs = 3;
+    float learning_rate = 4;
+    int32 batch_size = 5;
+    float train_test_split = 6;
+    repeated string target_columns = 7;
+}
+message NBeatsConfig {
+    int32 stack_size = 1;
+    int32 block_size = 2;
+    int32 layers = 3;
+    int32 layer_size = 4;
+    int32 theta_size = 5;
+}
+message BayesianLSTMConfig {
+    int32 hidden_size = 1;
+    int32 layers = 2;
+    float dropout = 3;
+}
+message DeepTCNConfig {
+    repeated int32 channels = 1;
+    int32 kernel_size = 2;
+    float dropout = 3;
+}
+message ForecastConfiguration {
+    ForecastCommonConfig common = 1;
+    oneof model_config {
+        NBeatsConfig nbeats = 2;
+        BayesianLSTMConfig bayesian_lstm = 3;
+        DeepTCNConfig deep_tcn = 4;
+    }
+}
+// Enhanced forecast data with metadata
+message ForecastData {
+    repeated double test_predictions = 1;
+    repeated double test_actuals = 2;
+    repeated double future_forecast = 3;
+    repeated int64 future_timestamps = 4;
+
+    // Prediction intervals
+    repeated double upper_bound = 5;
+    repeated double lower_bound = 6;
+    double confidence_level = 7;
+
+    // Residuals analysis
+    repeated double residuals = 8;
+    double residuals_mean = 9;
+    double residuals_std = 10;
+}
+message AnomalyPrediction {
+    bool is_anomaly = 1;
+    double score = 2;
+    double threshold = 3;
+    int32 label = 4; 
+}
+message IsolationForestConfig {
+    int32 n_estimators = 1;
+}
+message OneClassSVMConfig {
+    string kernel = 1;
+    float nu = 2;
+    string gamma = 3;
+}
+message AutoEncoderConfig {
+    int32 hidden_dim = 1;
+    int32 epochs = 2;
+    int32 batch_size = 3;
+    float learning_rate = 4;
+}
+message AnomalyConfiguration {
+    repeated string feature_columns = 1;
+    float contamination = 2;
+    oneof model_config {
+        IsolationForestConfig isolation_forest = 3;
+        OneClassSVMConfig one_class_svm = 4;
+        AutoEncoderConfig autoencoder = 5;
+    }
+}
+// Model metadata for better tracking
+message ModelMetadata {
+    string model_id = 1;
+    string model_name = 2;
+    ModelType model_type = 3;
+    int64 created_at = 4;
+}
+message ModelDetails {
+    ForecastMetrics metrics = 1;
+    ForecastConfiguration final_config = 2;
+
+    int64 inference_time_ms = 3;
+    int32 actual_epochs = 4;
+    bool early_stopped = 5;
+}
+message ClassifierDetails {
+    repeated ClassificationMetrics per_class_metrics = 1;
+    repeated AggregateClassificationMetrics aggregate_metrics = 2;
+    repeated Int32List confusion_matrix = 3;
+    double accuracy = 4;
+}
+message AnomalyDetails {
+    int32 total_samples = 1;
+    int32 anomaly_count = 2;
+    double anomaly_ratio = 3;
+    double threshold = 4;
+}
+// ============================================================================
+// SERVICE DEFINITIONS
+// ============================================================================
+
+service ForecastingService {
+    // Data preprocessing
+    rpc Preprocess(PreprocessRequest) returns (PreprocessResponse);
+    rpc Train(TrainRequest) returns (TrainResponse);
+    rpc Forecast(ForecastRequest) returns (ForecastResponse);
+    rpc Retrain(RetrainRequest) returns (RetrainResponse);
+
+    //common model management
+    rpc GetModelDetails(ModelDetailsRequest) returns (ModelDetailsResponse);
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+    rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+service ClassificationService {
+    // Data labeling
+    rpc GenerateLabels(LabelRequest) returns (LabelResponse);
+    rpc Train(ClassifierTrainRequest) returns (ClassifierTrainResponse);
+    rpc Predict(ClassifierPredictRequest) returns (ClassifierPredictResponse);
+    rpc RetrainClassifier(RetrainClassifierRequest) returns (RetrainClassifierResponse);
+
+    //common model management
+    rpc GetModelDetails(ModelDetailsRequest) returns (ModelDetailsResponse);
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+    rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+service AnomalyService {
+ 
+    rpc Train(AnomalyTrainRequest) returns (AnomalyTrainResponse);
+    rpc Predict(AnomalyPredictRequest) returns (AnomalyPredictResponse);
+    rpc RetrainAnomaly(AnomalyReTrainRequest) returns (AnomalyReTrainResponse);
+    //common model management
+    rpc GetModelDetails(ModelDetailsRequest) returns (ModelDetailsResponse);
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+    rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Preprocessing messages
+message PreprocessRequest {
+    string session_id = 1;          // For request tracking
+    repeated google.protobuf.Struct items = 2;
+    repeated string target_columns = 3;
+    int64 aggregation_interval = 4; 
+    AggregationMethods aggregation_method = 5;   // mean, sum, max, min
+}
+
+message PreprocessResponse {
+    string session_id = 1;
+    repeated google.protobuf.Struct items = 2;
+    ServiceStatus status = 3;
+    ErrorDetails error = 4;
+
+    // Preprocessing statistics
+    int32 original_count = 5;
+    int32 processed_count = 6;
+}
+
+// Training messages
+message TrainRequest {
+    string session_id = 1;
+    string model_id = 2;
+    ForecastingModel model_name = 3;
+    ForecastConfiguration config = 4;
+    repeated google.protobuf.Struct items = 5;
+}
+
+message TrainResponse {
+    string session_id = 1;
+    ModelMetadata model_metadata = 2;
+    ModelDetails model_details = 3;
+    int64 inference_time_ms = 4;
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+
+// Forecasting messages
+message ForecastRequest {
+    string session_id = 1;
+    string model_id = 2;
+    repeated string target_columns = 3;
+    int64 forecast_steps = 4;
+    repeated google.protobuf.Struct items = 5;
+    ForecastingModel model_name = 6;
+}
+
+message ForecastResponse {
+    string session_id = 1;
+    repeated google.protobuf.Struct forecast_items = 2;
+    ForecastData detailed_forecast = 3;
+    int64 inference_time_ms = 4;
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+
+// Retraining messages
+message RetrainRequest {
+    string session_id = 1;  
+    string model_id = 2;
+    ForecastingModel model_name = 3;
+    repeated google.protobuf.Struct items = 4;
+}
+
+message RetrainResponse {
+    string session_id = 1;  
+    string model_id = 2;
+    ForecastMetrics old_metrics = 3;
+    ForecastMetrics new_metrics = 4;
+    int64 inference_time_ms = 5;
+    ServiceStatus status = 6;
+    ErrorDetails error = 7;
+}
+
+
+// ============================================================================
+// CLASSIFICATION SERVICE MESSAGES
+// ============================================================================
+
+// Label generation
+message LabelRequest {
+    string session_id = 1;
+    int32 max_clusters = 2;
+    repeated google.protobuf.Struct items = 4;
+}
+
+message LabelResponse {
+    string session_id = 1;
+    int32 optimal_clusters = 2;
+    repeated google.protobuf.Struct labeled_items = 3;
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+
+// Classifier training
+message ClassifierTrainRequest {
+    string session_id = 1;
+    string model_id = 2;
+    ClassifierModel model_name = 3;
+    repeated google.protobuf.Struct items = 4;
+}
+
+message ClassifierTrainResponse {
+    string session_id = 1;
+    ModelMetadata model_metadata = 2;
+    ClassifierDetails details = 3;
+    // Training metadata
+    int64 inference_time_ms = 4;
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+    
+ 
+}
+
+// Classifier prediction
+message ClassifierPredictRequest {
+    string session_id = 1;
+    string model_id = 2;
+    repeated google.protobuf.Struct items = 3;
+}
+
+message ClassifierPredictResponse {
+    string session_id = 1;
+    repeated PredictionResult predictions = 2;
+    int64 inference_time_ms = 3;
+
+    ServiceStatus status = 4;
+    ErrorDetails error = 5;
+}
+
+message PredictionResult {
+    int32 predicted_class = 1;
+    string predicted_class_name = 2;
+    repeated double class_probabilities = 3;
+    double confidence_score = 4;
+}
+// Evaluate classifier
+message RetrainClassifierRequest {
+    string model_id = 1;
+    repeated google.protobuf.Struct items = 2;
+}
+
+message RetrainClassifierResponse {
+    string model_id = 1;
+    string session_id = 2;
+    ClassificationMetrics old_classifier_metrics = 3;
+    ClassificationMetrics new_classifier_metrics = 4;
+    int64 inference_time_ms = 5;
+    ServiceStatus status = 6;
+    ErrorDetails error = 7;
+}
+// ============================================================================
+// ANOMALY SERVICE MESSAGES
+// ============================================================================
+message AnomalyTrainRequest {
+    string session_id = 1;
+    string model_id = 2;
+    AnomalyModel model_name = 3;
+
+    repeated google.protobuf.Struct items = 4;
+    AnomalyConfiguration config = 5;
+}
+message AnomalyTrainResponse {
+    string session_id = 1;
+    ModelMetadata metadata = 2;
+    AnomalyDetails details = 3;
+    int64 inference_time_ms = 4;
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+message AnomalyPredictRequest {
+    string session_id = 1;
+    string model_id = 2;
+    repeated google.protobuf.Struct items = 3;
+}
+message AnomalyPredictResponse {
+    string session_id = 1;
+    repeated AnomalyPrediction predictions = 2;
+    int64 inference_time_ms = 3;
+    ServiceStatus status = 4;
+    ErrorDetails error = 5;
+}
+
+message AnomalyReTrainRequest {
+    string model_id = 1;
+
+    repeated google.protobuf.Struct items = 2;
+
+    bool force = 3;
+}
+message AnomalyReTrainResponse {
+    string model_id = 1;
+    string session_id = 2;
+
+    AnomalyDetails old_details = 3;
+    AnomalyDetails new_details = 4;
+
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+
+// ============================================================================
+// COMMON SERVICE MESSAGES
+// ============================================================================
+
+// Health check messages
+message HealthCheckRequest {
+    string service = 1;              // Optional: specific service to check
+}
+
+message HealthCheckResponse {
+    enum ServingStatus {
+        UNKNOWN = 0;
+        SERVING = 1;
+        NOT_SERVING = 2;
+        SERVICE_UNKNOWN = 3;
+    }
+
+    ServingStatus status = 1;
+    string message = 2;
+    int64 timestamp = 3;
+    map<string, string> details = 4; // Additional health information
+}
+// Model details messages
+message ModelDetailsRequest {
+    string model_id = 1;
+    ModelType model_type = 2;
+}
+
+message ModelDetailsResponse {
+    ModelMetadata metadata = 1;
+    oneof details {
+        ModelDetails forecast_config = 2;
+        ClassifierDetails classifier_details = 3;
+        AnomalyDetails anomaly_details = 4;
+    }
+    ServiceStatus status = 5;
+    ErrorDetails error = 6;
+}
+
+// List classifiers
+message ListModelsRequest {
+   string type_id = 1;
+}
+
+message ListModelsResponse {
+    repeated string ids = 1;
+    ServiceStatus status = 2;
+    ErrorDetails error = 3;
+}
+
+// Delete classifier
+message DeleteModelRequest {
+    repeated string model_ids = 1;
+    string type_id = 2;
+}
+
+message DeleteModelResult {
+    string model_id = 1;
+    bool deleted = 2;
+    string message = 3;
+}
+
+message DeleteModelResponse {
+    repeated DeleteModelResult results = 1;
+    ServiceStatus status = 2;
+    ErrorDetails error = 3;
+}
