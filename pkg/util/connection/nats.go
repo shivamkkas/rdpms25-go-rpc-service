@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"rdpms25-go-rpc-service/pkg/config"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/config"
 )
 
 func NewNatsConnection(clientId string, config *config.NatsConf) (*nats.Conn, error) {

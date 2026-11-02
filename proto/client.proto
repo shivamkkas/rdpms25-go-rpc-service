@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package forecasting;
-option go_package = "pb/proto;proto";
+option go_package = "pkg/core/proto;proto";
 import "google/protobuf/struct.proto";
 
 // Common status and error handling

@@ -1,6 +1,6 @@
 package main
 
-import "rdpms25-go-rpc-service/pkg"
+import "github.com/shivamkkas/rdpms25-go-rpc-service/pkg"
 
 var (
 	version   string = "unknown"

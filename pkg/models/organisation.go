@@ -69,6 +69,44 @@ var OrganisationTableColumns = struct {
 
 // Generated where
 
+type whereHelpernull_Int struct{ field string }
+
+func (w whereHelpernull_Int) EQ(x null.Int) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Int) NEQ(x null.Int) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Int) LT(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Int) LTE(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Int) GT(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Int) GTE(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_Int) IN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_Int) NIN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_Int) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Int) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var OrganisationWhere = struct {
 	ID       whereHelperint
 	Class    whereHelperstring
@@ -90,13 +128,11 @@ var OrganisationRels = struct {
 	Parent              string
 	Assets              string
 	EdgeGateways        string
-	IotDevices          string
 	ParentOrganisations string
 }{
 	Parent:              "Parent",
 	Assets:              "Assets",
 	EdgeGateways:        "EdgeGateways",
-	IotDevices:          "IotDevices",
 	ParentOrganisations: "ParentOrganisations",
 }
 
@@ -105,7 +141,6 @@ type organisationR struct {
 	Parent              *Organisation     `boil:"Parent" json:"Parent" toml:"Parent" yaml:"Parent"`
 	Assets              AssetSlice        `boil:"Assets" json:"Assets" toml:"Assets" yaml:"Assets"`
 	EdgeGateways        EdgeGatewaySlice  `boil:"EdgeGateways" json:"EdgeGateways" toml:"EdgeGateways" yaml:"EdgeGateways"`
-	IotDevices          IotDeviceSlice    `boil:"IotDevices" json:"IotDevices" toml:"IotDevices" yaml:"IotDevices"`
 	ParentOrganisations OrganisationSlice `boil:"ParentOrganisations" json:"ParentOrganisations" toml:"ParentOrganisations" yaml:"ParentOrganisations"`
 }
 
@@ -160,22 +195,6 @@ func (r *organisationR) GetEdgeGateways() EdgeGatewaySlice {
 	}
 
 	return r.EdgeGateways
-}
-
-func (o *Organisation) GetIotDevices() IotDeviceSlice {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetIotDevices()
-}
-
-func (r *organisationR) GetIotDevices() IotDeviceSlice {
-	if r == nil {
-		return nil
-	}
-
-	return r.IotDevices
 }
 
 func (o *Organisation) GetParentOrganisations() OrganisationSlice {
@@ -569,20 +588,6 @@ func (o *Organisation) EdgeGateways(mods ...qm.QueryMod) edgeGatewayQuery {
 	return EdgeGateways(queryMods...)
 }
 
-// IotDevices retrieves all the iot_device's IotDevices with an executor.
-func (o *Organisation) IotDevices(mods ...qm.QueryMod) iotDeviceQuery {
-	var queryMods []qm.QueryMod
-	if len(mods) != 0 {
-		queryMods = append(queryMods, mods...)
-	}
-
-	queryMods = append(queryMods,
-		qm.Where("\"iot_device\".\"organisation_id\"=?", o.ID),
-	)
-
-	return IotDevices(queryMods...)
-}
-
 // ParentOrganisations retrieves all the organisation's Organisations with an executor via parent_id column.
 func (o *Organisation) ParentOrganisations(mods ...qm.QueryMod) organisationQuery {
 	var queryMods []qm.QueryMod
@@ -947,119 +952,6 @@ func (organisationL) LoadEdgeGateways(ctx context.Context, e boil.ContextExecuto
 	return nil
 }
 
-// LoadIotDevices allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (organisationL) LoadIotDevices(ctx context.Context, e boil.ContextExecutor, singular bool, maybeOrganisation interface{}, mods queries.Applicator) error {
-	var slice []*Organisation
-	var object *Organisation
-
-	if singular {
-		var ok bool
-		object, ok = maybeOrganisation.(*Organisation)
-		if !ok {
-			object = new(Organisation)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeOrganisation)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeOrganisation))
-			}
-		}
-	} else {
-		s, ok := maybeOrganisation.(*[]*Organisation)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeOrganisation)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeOrganisation))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &organisationR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &organisationR{}
-			}
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`iot_device`),
-		qm.WhereIn(`iot_device.organisation_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load iot_device")
-	}
-
-	var resultSlice []*IotDevice
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice iot_device")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on iot_device")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for iot_device")
-	}
-
-	if len(iotDeviceAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-	if singular {
-		object.R.IotDevices = resultSlice
-		for _, foreign := range resultSlice {
-			if foreign.R == nil {
-				foreign.R = &iotDeviceR{}
-			}
-			foreign.R.Organisation = object
-		}
-		return nil
-	}
-
-	for _, foreign := range resultSlice {
-		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.OrganisationID) {
-				local.R.IotDevices = append(local.R.IotDevices, foreign)
-				if foreign.R == nil {
-					foreign.R = &iotDeviceR{}
-				}
-				foreign.R.Organisation = local
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // LoadParentOrganisations allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (organisationL) LoadParentOrganisations(ctx context.Context, e boil.ContextExecutor, singular bool, maybeOrganisation interface{}, mods queries.Applicator) error {
@@ -1390,161 +1282,6 @@ func (o *Organisation) AddEdgeGateways(ctx context.Context, exec boil.ContextExe
 			rel.R.Organisation = o
 		}
 	}
-	return nil
-}
-
-// AddIotDevicesG adds the given related objects to the existing relationships
-// of the organisation, optionally inserting them as new records.
-// Appends related to o.R.IotDevices.
-// Sets related.R.Organisation appropriately.
-// Uses the global database handle.
-func (o *Organisation) AddIotDevicesG(ctx context.Context, insert bool, related ...*IotDevice) error {
-	return o.AddIotDevices(ctx, boil.GetContextDB(), insert, related...)
-}
-
-// AddIotDevices adds the given related objects to the existing relationships
-// of the organisation, optionally inserting them as new records.
-// Appends related to o.R.IotDevices.
-// Sets related.R.Organisation appropriately.
-func (o *Organisation) AddIotDevices(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*IotDevice) error {
-	var err error
-	for _, rel := range related {
-		if insert {
-			queries.Assign(&rel.OrganisationID, o.ID)
-			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
-				return errors.Wrap(err, "failed to insert into foreign table")
-			}
-		} else {
-			updateQuery := fmt.Sprintf(
-				"UPDATE \"iot_device\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"organisation_id"}),
-				strmangle.WhereClause("\"", "\"", 2, iotDevicePrimaryKeyColumns),
-			)
-			values := []interface{}{o.ID, rel.ID}
-
-			if boil.IsDebug(ctx) {
-				writer := boil.DebugWriterFrom(ctx)
-				fmt.Fprintln(writer, updateQuery)
-				fmt.Fprintln(writer, values)
-			}
-			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-				return errors.Wrap(err, "failed to update foreign table")
-			}
-
-			queries.Assign(&rel.OrganisationID, o.ID)
-		}
-	}
-
-	if o.R == nil {
-		o.R = &organisationR{
-			IotDevices: related,
-		}
-	} else {
-		o.R.IotDevices = append(o.R.IotDevices, related...)
-	}
-
-	for _, rel := range related {
-		if rel.R == nil {
-			rel.R = &iotDeviceR{
-				Organisation: o,
-			}
-		} else {
-			rel.R.Organisation = o
-		}
-	}
-	return nil
-}
-
-// SetIotDevicesG removes all previously related items of the
-// organisation replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.Organisation's IotDevices accordingly.
-// Replaces o.R.IotDevices with related.
-// Sets related.R.Organisation's IotDevices accordingly.
-// Uses the global database handle.
-func (o *Organisation) SetIotDevicesG(ctx context.Context, insert bool, related ...*IotDevice) error {
-	return o.SetIotDevices(ctx, boil.GetContextDB(), insert, related...)
-}
-
-// SetIotDevices removes all previously related items of the
-// organisation replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.Organisation's IotDevices accordingly.
-// Replaces o.R.IotDevices with related.
-// Sets related.R.Organisation's IotDevices accordingly.
-func (o *Organisation) SetIotDevices(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*IotDevice) error {
-	query := "update \"iot_device\" set \"organisation_id\" = null where \"organisation_id\" = $1"
-	values := []interface{}{o.ID}
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, query)
-		fmt.Fprintln(writer, values)
-	}
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	if o.R != nil {
-		for _, rel := range o.R.IotDevices {
-			queries.SetScanner(&rel.OrganisationID, nil)
-			if rel.R == nil {
-				continue
-			}
-
-			rel.R.Organisation = nil
-		}
-		o.R.IotDevices = nil
-	}
-
-	return o.AddIotDevices(ctx, exec, insert, related...)
-}
-
-// RemoveIotDevicesG relationships from objects passed in.
-// Removes related items from R.IotDevices (uses pointer comparison, removal does not keep order)
-// Sets related.R.Organisation.
-// Uses the global database handle.
-func (o *Organisation) RemoveIotDevicesG(ctx context.Context, related ...*IotDevice) error {
-	return o.RemoveIotDevices(ctx, boil.GetContextDB(), related...)
-}
-
-// RemoveIotDevices relationships from objects passed in.
-// Removes related items from R.IotDevices (uses pointer comparison, removal does not keep order)
-// Sets related.R.Organisation.
-func (o *Organisation) RemoveIotDevices(ctx context.Context, exec boil.ContextExecutor, related ...*IotDevice) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	for _, rel := range related {
-		queries.SetScanner(&rel.OrganisationID, nil)
-		if rel.R != nil {
-			rel.R.Organisation = nil
-		}
-		if _, err = rel.Update(ctx, exec, boil.Whitelist("organisation_id")); err != nil {
-			return err
-		}
-	}
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.IotDevices {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.IotDevices)
-			if ln > 1 && i < ln-1 {
-				o.R.IotDevices[i] = o.R.IotDevices[ln-1]
-			}
-			o.R.IotDevices = o.R.IotDevices[:ln-1]
-			break
-		}
-	}
-
 	return nil
 }
 

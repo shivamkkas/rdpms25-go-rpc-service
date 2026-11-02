@@ -4,7 +4,9 @@
 package models
 
 var ViewNames = struct {
-	ParamView string
+	AssetHistoryView string
+	ParamView        string
 }{
-	ParamView: "param_view",
+	AssetHistoryView: "asset_history_view",
+	ParamView:        "param_view",
 }

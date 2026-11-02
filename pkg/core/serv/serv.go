@@ -1,13 +1,13 @@
-package service
+package serv
 
 import (
 	"context"
-	"rdpms25-go-rpc-service/pkg/core/domain"
 
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/ponder2000/rdpms25-template/pkg/core/dto"
-	"github.com/ponder2000/rdpms25-template/pkg/util/sqlhelper"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/core/domain"
+	"github.com/shivamkkas/rdpms25-go-rpc-service/pkg/util/sqlhelper"
 )
 
 type Deletable interface {

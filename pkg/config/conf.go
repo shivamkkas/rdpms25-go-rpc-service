@@ -21,6 +21,7 @@ type Configuration struct {
 
 type AppConf struct {
 	VendorCloudCode string
+	Port            int64
 }
 type GrpcConf struct {
 	Host       string

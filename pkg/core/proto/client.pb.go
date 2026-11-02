@@ -4663,7 +4663,7 @@ const file_proto_client_proto_rawDesc = "" +
 	"\n" +
 	"ListModels\x12\x1e.forecasting.ListModelsRequest\x1a\x1f.forecasting.ListModelsResponse\x12P\n" +
 	"\vDeleteModel\x12\x1f.forecasting.DeleteModelRequest\x1a .forecasting.DeleteModelResponse\x12P\n" +
-	"\vHealthCheck\x12\x1f.forecasting.HealthCheckRequest\x1a .forecasting.HealthCheckResponseB\x10Z\x0epb/proto;protob\x06proto3"
+	"\vHealthCheck\x12\x1f.forecasting.HealthCheckRequest\x1a .forecasting.HealthCheckResponseB\x16Z\x14pkg/core/proto;protob\x06proto3"
 
 var (
 	file_proto_client_proto_rawDescOnce sync.Once
